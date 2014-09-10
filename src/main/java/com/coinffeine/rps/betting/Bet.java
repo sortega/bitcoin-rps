@@ -1,10 +1,16 @@
 package com.coinffeine.rps.betting;
 
 import com.coinffeine.rps.model.Hand;
-import com.coinffeine.rps.model.MatchResult;
 
 public interface Bet {
-    String getMatchAddress();
-    void waitForPayment();
-    MatchResult play(Hand userHand);
+
+    enum Winner {
+        User,
+        Tie,
+        House
+    }
+
+    String getBetAddress();
+    boolean waitForPayment();
+    Winner play(Hand userHand, String userAddress);
 }
