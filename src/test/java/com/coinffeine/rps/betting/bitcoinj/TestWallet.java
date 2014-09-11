@@ -12,12 +12,8 @@ public class TestWallet extends ExternalResource {
     private TemporaryFolder folder = new TemporaryFolder();
     private WalletAppKit kit;
 
-    public TestWallet(String privateKey) {
-        try {
-            this.privateKey = new DumpedPrivateKey(TestNetwork.get().params(), privateKey).getKey();
-        } catch (AddressFormatException e) {
-            throw new ExceptionInInitializerError(e);
-        }
+    public TestWallet(ECKey privateKey) {
+        this.privateKey = privateKey;
     }
 
     @Override

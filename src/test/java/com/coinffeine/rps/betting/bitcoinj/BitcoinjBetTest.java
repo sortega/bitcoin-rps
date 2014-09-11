@@ -6,42 +6,38 @@ import com.google.bitcoin.core.*;
 import com.google.common.util.concurrent.SettableFuture;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.coinffeine.rps.BaseTest;
 import com.coinffeine.rps.betting.Bet;
 import com.coinffeine.rps.model.Hand;
 
-public class BitcoinjBetTest {
+public class BitcoinjBetTest extends BaseTest {
 
     private static BigInteger BET_SIZE = BigInteger.valueOf(500000);
 
-    @Rule
-    public TestWallet houseWallet =
-            new TestWallet("cNrvrFRtiu4o5vauQvLX9WeFFaPvSMwzEM4WdewaYDPA4arctd7b");
-    @Rule
-    public TestWallet userWallet =
-            new TestWallet("cQwrHJ1eA9rxXJ7nUzARVpwQwqaTRVDTnpRtMer372uK2iNAxAi3");
+    @Rule public TestWallet houseWallet = new TestWallet(testKeys.get(0));
+    @Rule public TestWallet userWallet = new TestWallet(testKeys.get(1));
     private Bet instance;
+    private Address betAddress;
 
-    @Test
-    public void shouldProvideABetAddress() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         instance = new BitcoinjBet(houseWallet.get(), Hand.Rock, BET_SIZE);
-        parseBetAddress();
+        betAddress = new Address(TestNetwork.get().params(), instance.getBetAddress());
     }
 
     @Test(timeout = 300000)
     public void shouldWaitUntilHavingEnoughFundsReceived() throws Exception {
-        instance = new BitcoinjBet(houseWallet.get(), Hand.Rock, BET_SIZE);
-        givenUserPayABet(parseBetAddress());
+        givenUserPayABet();
         assertTrue(instance.waitForPayment());
     }
 
     @Test(timeout = 300000)
     public void shouldPayToWinnerUsers() throws Exception {
-        instance = new BitcoinjBet(houseWallet.get(), Hand.Rock, BET_SIZE);
-        Address betAddress = parseBetAddress();
-        givenUserPayABet(betAddress);
+        givenUserPayABet();
         SettableFuture<Transaction> paymentFuture =
                 paymentFuture(BET_SIZE.multiply(BigInteger.valueOf(2)));
         assertTrue(instance.waitForPayment());
@@ -51,9 +47,7 @@ public class BitcoinjBetTest {
 
     @Test(timeout = 300000)
     public void shouldRefundTiedUsers() throws Exception {
-        instance = new BitcoinjBet(houseWallet.get(), Hand.Rock, BET_SIZE);
-        Address betAddress = parseBetAddress();
-        givenUserPayABet(betAddress);
+        givenUserPayABet();
         SettableFuture<Transaction> paymentFuture = paymentFuture(BET_SIZE);
         assertTrue(instance.waitForPayment());
         assertEquals(Bet.Winner.Tie, instance.play(Hand.Rock, userWallet.address().toString()));
@@ -62,8 +56,7 @@ public class BitcoinjBetTest {
 
     @Test(timeout = 300000)
     public void shouldNotPayOtherwise() throws Exception {
-        instance = new BitcoinjBet(houseWallet.get(), Hand.Rock, BET_SIZE);
-        givenUserPayABet(parseBetAddress());
+        givenUserPayABet();
         assertTrue(instance.waitForPayment());
         BigInteger previousBalance = userWallet.get().getBalance();
         assertEquals(Bet.Winner.House, instance.play(Hand.Scissors, userWallet.address().toString()));
@@ -83,13 +76,9 @@ public class BitcoinjBetTest {
         return paymentPromise;
     }
 
-    private void givenUserPayABet(Address betAddress) throws InsufficientMoneyException {
+    private void givenUserPayABet() throws InsufficientMoneyException {
         final Wallet.SendRequest request = Wallet.SendRequest.to(betAddress, BET_SIZE);
         request.changeAddress = userWallet.address();
         userWallet.get().sendCoins(request);
-    }
-
-    private Address parseBetAddress() throws AddressFormatException {
-        return new Address(TestNetwork.get().params(), instance.getBetAddress());
     }
 }
